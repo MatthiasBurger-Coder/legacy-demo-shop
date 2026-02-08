@@ -1,0 +1,8 @@
+<aspectj>
+    <aspects>
+        <aspect name="com.acme.logging.TracingAspect"/>
+    </aspects>
+    <weaver options="-verbose">
+        <include within="com.acme..*"/>
+    </weaver>
+</aspectj>

@@ -1,0 +1,6 @@
+# id;customerId;country;netTotal;includeTax
+A-100;C-1;DE;100,00;0
+A-101;C-2;DE;200,00;0
+A-102;C-3;US;100,00;0
+A-103;C-4;DE;119,00;1
+A-ROUND;C-5;DE;119,99;1
