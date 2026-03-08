@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentHashMap
 plugins {
     application
     groovy
-    id("de.burger.forensics.btmgen") version "0.0.2-SNAPSHOT"
+    id("de.burger.forensics.btmgen") version "0.0.3-SNAPSHOT"
 }
 
 repositories {
@@ -57,7 +57,7 @@ tasks.test {
         val weaver = configurations.testRuntimeClasspath.get().files.first { it.name.startsWith("aspectjweaver") }
         jvmArgs("-javaagent:${weaver.absolutePath}")
     }
-    dependsOn("generateBtmRules","dedupeBtmRuleNames")
+    dependsOn("generateBtmRules")
 }
 
 tasks.named<JavaExec>("run") {
@@ -73,52 +73,20 @@ tasks.named<JavaExec>("run") {
 }
 
 btmGen {
-    sourceRoot.set(layout.projectDirectory.dir("src/main/java").asFile)
-    outputFile.set(layout.buildDirectory.file("forensics/forensics.btm").get().asFile)
+    minBranchesPerMethod.set(0)
 }
+
+val dedupeBtmTask = tasks.matching { it.name == "dedupeBtmRuleNames" || it.name == "dedupeBtmRules" }
+
 tasks.named<de.burger.forensics.plugin.btmgen.gradle.GenerateBtmTask>("generateBtmRules") {
-    includeEntryExit.set(false)               // Ersatz für 'entryExit'
-    minBranchesPerMethod.set(0)              // Ersatz für 'minBranchesPerMethod'
-    logToFile.set(true)                      // Ersatz für 'logToFile'
-    logFilePath.set(
-        layout.buildDirectory.file("forensics/generate.log").get().asFile.absolutePath
-    )
-}
-
-tasks.register("dedupeBtmRuleNames") {
-    dependsOn("generateBtmRules")
-    val inFile = layout.buildDirectory.file("forensics/forensics.btm")
-    val outFile = layout.buildDirectory.file("forensics/forensics.dedup.btm")
-
-    inputs.file(inFile)
-    outputs.file(outFile)
-
-    doLast {
-        val src = inFile.get().asFile
-        val dst = outFile.get().asFile
-        dst.parentFile.mkdirs()
-
-        // RULE <name>  -> ensure name uniqueness by suffixing duplicates
-        val ruleHeader = Regex("""^\s*RULE\s+(.+)\s*$""")
-        val seen = ConcurrentHashMap<String, Int>()
-        val outLines = src.readLines().map { line ->
-            val m = ruleHeader.find(line)
-            if (m != null) {
-                val orig = m.groupValues[1].trim()
-                val n = seen.merge(orig, 1) { a, b -> a + b }!!
-                if (n == 1) line else line.replace(orig, "${orig}_$n")
-            } else line
-        }
-        dst.writeText(outLines.joinToString(System.lineSeparator()) + System.lineSeparator())
-        println("Deduped BTM written to: ${dst.absolutePath}")
-    }
+    includeEntryExit.set(false)
 }
 
 tasks.named<Test>("test") {
-    dependsOn("dedupeBtmRuleNames")
+    dependsOn(dedupeBtmTask)
 
     doFirst {
-        val btm = layout.buildDirectory.file("forensics/forensics.dedup.btm").get().asFile
+        val btm = layout.buildDirectory.file("forensics/forensics.btm").get().asFile
         val agent = bytemanAgent.resolve().single()
 
         // Normalize to forward slashes for Windows agent arg parsing
@@ -140,6 +108,4 @@ tasks.named<Test>("test") {
         exceptionFormat = TestExceptionFormat.FULL
     }
 }
-
-
 

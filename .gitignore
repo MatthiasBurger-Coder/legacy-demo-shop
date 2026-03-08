@@ -9,3 +9,4 @@ build/
 /.idea/modules.xml
 /.idea/modules/forensics-tracing.test.iml
 /.idea/modules/forensics-tracing.main.iml
+/logs/forensics-btmgen.log
