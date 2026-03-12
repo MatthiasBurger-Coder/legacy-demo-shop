@@ -76,15 +76,24 @@ btmGen {
     minBranchesPerMethod.set(0)
 }
 
-val dedupeBtmTask = tasks.matching { it.name == "dedupeBtmRuleNames" || it.name == "dedupeBtmRules" }
-
 tasks.named<de.burger.forensics.plugin.btmgen.gradle.GenerateBtmTask>("generateBtmRules") {
     includeEntryExit.set(false)
 }
 
-tasks.named<Test>("test") {
-    dependsOn(dedupeBtmTask)
+tasks.named<de.burger.forensics.plugin.btmgen.gradle.GenerateActivityPumlFromTraceTask>("generateActivityPumlFromTrace") {
+    inputTrace.set(file("D:/Projects/legacy-demo-shop/logs/trace.json"))
+    outputPuml.set(layout.buildDirectory.file("forensics/source.puml"))
+    // optional endpoint override:
+    // rootClass.set("com.acme.legacy.OrderService")
+    // rootMethod.set("sumGross")
+}
 
+tasks.withType<Test>().configureEach {
+    systemProperty("forensics.rt.enabled", "true")
+    systemProperty("forensics.rt.output", "logs/trace.json")
+}
+
+tasks.named<Test>("test") {
     doFirst {
         val btm = layout.buildDirectory.file("forensics/forensics.btm").get().asFile
         val agent = bytemanAgent.resolve().single()
